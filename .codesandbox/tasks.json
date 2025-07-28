@@ -9,13 +9,38 @@
 
   // These tasks can be run from CodeSandbox. Running one will open a log in the app.
   "tasks": {
-    "start": {
-      "name": "test",
+    "test-all": {
+      "name": "Run All Tests",
       "command": "yarn test",
       "runAtStart": false
     },
+    "test-rate-limiter": {
+      "name": "Test Rate Limiter",
+      "command": "yarn test:rate-limiter",
+      "runAtStart": false
+    },
+    "test-increment": {
+      "name": "Test Increment",
+      "command": "yarn test:increment", 
+      "runAtStart": false
+    },
+    "test-watch": {
+      "name": "Test All (Watch Mode)",
+      "command": "yarn test:watch",
+      "runAtStart": false
+    },
+    "test-watch-rate-limiter": {
+      "name": "Test Rate Limiter (Watch Mode)",
+      "command": "yarn test:watch:rate-limiter",
+      "runAtStart": false
+    },
+    "test-watch-increment": {
+      "name": "Test Increment (Watch Mode)",
+      "command": "yarn test:watch:increment",
+      "runAtStart": false
+    },
     "install": {
-      "name": "install dependencies",
+      "name": "Install Dependencies",
       "command": "yarn install"
     }
   }

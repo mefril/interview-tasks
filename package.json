@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "test:rate-limiter": "vitest .codesandbox/rateLimiter",
+    "test:increment": "vitest .codesandbox/increment",
+    "test:watch": "vitest --watch",
+    "test:watch:rate-limiter": "vitest .codesandbox/rateLimiter --watch",
+    "test:watch:increment": "vitest .codesandbox/increment --watch"
   },
   "devDependencies": {
     "vitest": "^1.0.0"
