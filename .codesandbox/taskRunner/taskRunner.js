@@ -17,29 +17,30 @@
  *
  * Both functions should return a Promise that resolves with an array 
  * of results in the same order as the input tasks.
- * Each result should be: { id: taskId, completedAt: timestamp }
+ * Each result should be: { id: taskId, startedAt: timestamp, completedAt: timestamp }
  */
 
 // Helper function to simulate task execution
 function executeTask(task) {
+  const startedAt = Date.now();
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
         id: task.id,
+        startedAt: startedAt,
         completedAt: Date.now()
       });
     }, task.duration);
   });
 }
 
-export function executeTasksSequentially(tasks) {
-  // TODO: Implement sequential execution
-  throw new Error("Not implemented");
+export async function executeTasksSequentially(tasks) {
+
 }
 
-export function executeTasksWithConcurrency(tasks, concurrencyLimit) {
-  // TODO: Implement execution with concurrency limit
-  throw new Error("Not implemented");
+
+export async function executeTasksWithConcurrency(tasks, concurrencyLimit) {
+ 
 }
 
 // Export the helper for testing

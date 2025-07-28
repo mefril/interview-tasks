@@ -15,27 +15,6 @@ describe("TaskRunner", () => {
 
   describe("executeTasksSequentially", () => {
     it("should execute tasks one after another", async () => {
-      const executionLog = [];
-      let currentTime = 0;
-      
-      // Override setTimeout to track execution timing
-      vi.spyOn(global, 'setTimeout').mockImplementation((callback, delay) => {
-        const taskStart = currentTime;
-        currentTime += delay;
-        const taskEnd = currentTime;
-        
-        executionLog.push({ 
-          start: taskStart, 
-          end: taskEnd, 
-          delay 
-        });
-        
-        // Return a timer ID and queue the callback
-        const timerId = Math.random();
-        queueMicrotask(() => callback());
-        return timerId;
-      });
-
       const promise = executeTasksSequentially(sampleTasks);
       
       // Fast-forward through all timeouts
@@ -48,34 +27,27 @@ describe("TaskRunner", () => {
       expect(results[1].id).toBe(2);
       expect(results[2].id).toBe(3);
       
-      // Check that each result has completedAt timestamp
+      // Check that each result has both startedAt and completedAt timestamps
       results.forEach(result => {
+        expect(result).toHaveProperty('startedAt');
         expect(result).toHaveProperty('completedAt');
+        expect(typeof result.startedAt).toBe('number');
         expect(typeof result.completedAt).toBe('number');
+        expect(result.completedAt).toBeGreaterThanOrEqual(result.startedAt);
       });
 
-      // Verify sequential execution: each task should start after the previous one ends
-      expect(executionLog).toHaveLength(3);
-      
-      // Task 1: starts at 0, ends at 100
-      expect(executionLog[0].start).toBe(0);
-      expect(executionLog[0].end).toBe(100);
-      expect(executionLog[0].delay).toBe(100);
-      
-      // Task 2: starts at 100 (after task 1 ends), ends at 150
-      expect(executionLog[1].start).toBe(100);
-      expect(executionLog[1].end).toBe(150);
-      expect(executionLog[1].delay).toBe(50);
-      
-      // Task 3: starts at 150 (after task 2 ends), ends at 225
-      expect(executionLog[2].start).toBe(150);
-      expect(executionLog[2].end).toBe(225);
-      expect(executionLog[2].delay).toBe(75);
-
-      // Verify no overlapping execution
-      for (let i = 1; i < executionLog.length; i++) {
-        expect(executionLog[i].start).toBeGreaterThanOrEqual(executionLog[i-1].end);
+      // Verify sequential execution: each task should start after the previous one completes
+      for (let i = 1; i < results.length; i++) {
+        const previousTask = results[i - 1];
+        const currentTask = results[i];
+        
+        // Current task should start after or at the same time as previous task completion
+        expect(currentTask.startedAt).toBeGreaterThanOrEqual(previousTask.completedAt);
       }
+
+      // Verify tasks executed in the correct order by checking timing
+      expect(results[0].startedAt).toBeLessThanOrEqual(results[1].startedAt);
+      expect(results[1].startedAt).toBeLessThanOrEqual(results[2].startedAt);
     });
 
     it("should maintain order of results", async () => {
@@ -109,6 +81,8 @@ describe("TaskRunner", () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe(42);
+      expect(results[0]).toHaveProperty('startedAt');
+      expect(results[0]).toHaveProperty('completedAt');
     });
 
     it("should execute tasks with correct total duration", async () => {
@@ -122,10 +96,16 @@ describe("TaskRunner", () => {
       
       // Fast-forward to completion
       await vi.runAllTimersAsync();
-      await promise;
+      const results = await promise;
       
-      // Total execution time should be sum of all durations (100 + 200 + 50 = 350ms)
-      // We can't check real time due to fake timers, but the test structure validates sequential execution
+      // Verify total execution time by checking the span from first start to last completion
+      const totalDuration = results[results.length - 1].completedAt - results[0].startedAt;
+      
+      // In sequential execution, total time should be approximately the sum of all durations
+      // We use fake timers, so this should be exactly the sum
+      const expectedTotalDuration = tasks.reduce((sum, task) => sum + task.duration, 0);
+      expect(totalDuration).toBeGreaterThanOrEqual(expectedTotalDuration);
+      
       expect(vi.getTimerCount()).toBe(0); // All timers should be resolved
     });
   });
@@ -145,6 +125,12 @@ describe("TaskRunner", () => {
 
       expect(results).toHaveLength(4);
       expect(results.map(r => r.id)).toEqual([1, 2, 3, 4]);
+      
+      // Verify each result has timing information
+      results.forEach(result => {
+        expect(result).toHaveProperty('startedAt');
+        expect(result).toHaveProperty('completedAt');
+      });
     });
 
     it("should maintain order of results regardless of completion order", async () => {
@@ -168,6 +154,11 @@ describe("TaskRunner", () => {
 
       expect(results).toHaveLength(3);
       expect(results.map(r => r.id)).toEqual([1, 2, 3]);
+      
+      // When concurrency limit is 1, it should behave like sequential execution
+      for (let i = 1; i < results.length; i++) {
+        expect(results[i].startedAt).toBeGreaterThanOrEqual(results[i - 1].completedAt);
+      }
     });
 
     it("should handle concurrency limit greater than task count", async () => {
@@ -201,7 +192,7 @@ describe("TaskRunner", () => {
       }
     });
 
-    it("should not exceed concurrency limit", async () => {
+    it("should respect concurrency limit with proper timing", async () => {
       const concurrencyLimit = 2;
       const tasks = [
         { id: 1, duration: 200 },
@@ -210,28 +201,32 @@ describe("TaskRunner", () => {
         { id: 4, duration: 200 }
       ];
 
-      let activeTasks = 0;
-      let maxConcurrentTasks = 0;
-
-      // Override setTimeout to track concurrent executions
-      vi.spyOn(global, 'setTimeout').mockImplementation((callback, delay) => {
-        activeTasks++;
-        maxConcurrentTasks = Math.max(maxConcurrentTasks, activeTasks);
-        
-        // Use queueMicrotask to avoid recursion
-        queueMicrotask(() => {
-          activeTasks--;
-          callback();
-        });
-        
-        return Math.random();
-      });
-
       const promise = executeTasksWithConcurrency(tasks, concurrencyLimit);
       await vi.runAllTimersAsync();
-      await promise;
+      const results = await promise;
 
-      expect(maxConcurrentTasks).toBeLessThanOrEqual(concurrencyLimit);
+      expect(results).toHaveLength(4);
+      
+      // With concurrency limit of 2, tasks 1 and 2 should start around the same time
+      // Tasks 3 and 4 should start after tasks 1 or 2 complete
+      const task1 = results[0];
+      const task2 = results[1];
+      const task3 = results[2];
+      const task4 = results[3];
+
+      // Tasks 1 and 2 can start simultaneously (within concurrency limit)
+      const simultaneousStartThreshold = 10; // Allow small timing differences
+      expect(Math.abs(task1.startedAt - task2.startedAt)).toBeLessThanOrEqual(simultaneousStartThreshold);
+
+      // Task 3 should start after either task 1 or task 2 completes
+      expect(
+        task3.startedAt >= task1.completedAt || task3.startedAt >= task2.completedAt
+      ).toBe(true);
+
+      // Task 4 should start after either task 1 or task 2 completes
+      expect(
+        task4.startedAt >= task1.completedAt || task4.startedAt >= task2.completedAt
+      ).toBe(true);
     });
   });
 
@@ -244,8 +239,11 @@ describe("TaskRunner", () => {
       const result = await promise;
 
       expect(result.id).toBe(123);
+      expect(result.startedAt).toBeDefined();
       expect(result.completedAt).toBeDefined();
+      expect(typeof result.startedAt).toBe('number');
       expect(typeof result.completedAt).toBe('number');
+      expect(result.completedAt).toBeGreaterThanOrEqual(result.startedAt);
     });
   });
 }); 
