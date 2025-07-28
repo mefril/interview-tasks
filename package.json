@@ -6,9 +6,11 @@
     "test": "vitest",
     "test:rate-limiter": "vitest .codesandbox/rateLimiter",
     "test:increment": "vitest .codesandbox/increment",
+    "test:task-runner": "vitest .codesandbox/taskRunner",
     "test:watch": "vitest --watch",
     "test:watch:rate-limiter": "vitest .codesandbox/rateLimiter --watch",
-    "test:watch:increment": "vitest .codesandbox/increment --watch"
+    "test:watch:increment": "vitest .codesandbox/increment --watch",
+    "test:watch:task-runner": "vitest .codesandbox/taskRunner --watch"
   },
   "devDependencies": {
     "vitest": "^1.0.0"

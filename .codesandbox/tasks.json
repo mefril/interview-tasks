@@ -24,6 +24,11 @@
       "command": "yarn test:increment", 
       "runAtStart": false
     },
+    "test-task-runner": {
+      "name": "Test Task Runner",
+      "command": "yarn test:task-runner", 
+      "runAtStart": false
+    },
     "test-watch": {
       "name": "Test All (Watch Mode)",
       "command": "yarn test:watch",
@@ -37,6 +42,11 @@
     "test-watch-increment": {
       "name": "Test Increment (Watch Mode)",
       "command": "yarn test:watch:increment",
+      "runAtStart": false
+    },
+    "test-watch-task-runner": {
+      "name": "Test Task Runner (Watch Mode)",
+      "command": "yarn test:watch:task-runner",
       "runAtStart": false
     },
     "install": {
